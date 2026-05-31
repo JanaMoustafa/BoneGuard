@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Upload X-ray — BoneGuard{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <h1 class="page-header__title">Bone Tumour X-ray Analysis</h1>
+  <p class="page-header__subtitle">
+    Upload a bone X-ray image to generate an AI-powered research report with
+    tumour segmentation and multi-task classification.
+  </p>
+</div>
+
+<div class="card animate-in animate-in--delay-1" style="max-width: 680px; margin: 0 auto;">
+  <div class="card__header">
+    <h2 class="card__title">Upload Patient X-ray</h2>
+  </div>
+
+  <form class="upload-form" id="uploadForm" method="POST" action="{{ url_for('create_report') }}" enctype="multipart/form-data">
+
+    <!-- Dropzone -->
+    <div class="dropzone" id="dropzone">
+      <input
+        type="file"
+        name="xray"
+        id="xrayInput"
+        class="dropzone__file-input"
+        accept=".png,.jpg,.jpeg"
+        required
+      >
+      <div class="dropzone__content">
+        <p class="dropzone__text">Drag & drop your X-ray image here</p>
+        <p class="dropzone__hint">or click to browse &middot; PNG, JPG, JPEG</p>
+      </div>
+      <div class="dropzone__preview">
+        <img id="previewImage" src="" alt="Preview">
+        <span class="dropzone__preview-name" id="previewName"></span>
+      </div>
+    </div>
+
+    <!-- Age & Gender row -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="ageInput">Patient Age</label>
+        <input
+          type="number"
+          id="ageInput"
+          name="age"
+          min="0"
+          max="120"
+          step="1"
+          placeholder="e.g. 45"
+          required
+        >
+      </div>
+      <div class="form-group">
+        <label for="genderInput">Gender</label>
+        <select id="genderInput" name="gender" required>
+          <option value="" disabled selected>Select gender</option>
+          <option value="M">Male</option>
+          <option value="F">Female</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <button type="submit" class="btn btn--primary btn--full btn--lg" id="submitBtn">
+      <span class="spinner"></span>
+      <span class="btn__text">Generate Report</span>
+    </button>
+
+  </form>
+</div>
+
+<!-- Disclaimer card -->
+<div class="card animate-in animate-in--delay-2" style="max-width: 680px; margin: var(--space-xl) auto 0;">
+  <div class="card__header">
+    <h2 class="card__title">Important Notice</h2>
+  </div>
+  <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.7;">
+    This system is a <strong>research prototype</strong> developed as part of a graduation project.
+    It uses deep learning models trained on limited academic datasets and is
+    <strong>not validated for clinical use</strong>. Results must not be used for
+    medical diagnosis, treatment planning, or any clinical decision-making.
+    Always consult qualified healthcare professionals for medical evaluation.
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('xrayInput');
+  const previewImg = document.getElementById('previewImage');
+  const previewName = document.getElementById('previewName');
+  const submitBtn = document.getElementById('submitBtn');
+  const form = document.getElementById('uploadForm');
+
+  // Drag & drop visual feedback
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); });
+  });
+
+  // Handle file selection
+  function handleFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      previewName.textContent = file.name;
+      dropzone.classList.add('has-file');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+  dropzone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      // Manually set the input's files via DataTransfer
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      handleFile(file);
+    }
+  });
+
+  // Loading state on submit
+  form.addEventListener('submit', () => {
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+  });
+})();
+</script>
+{% endblock %}

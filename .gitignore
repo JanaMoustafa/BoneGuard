@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+website_data/uploads/*
+website_data/reports/*
+website_data/overlays/*
+website_data/db/reports.json
+!website_data/**/.gitkeep

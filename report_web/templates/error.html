@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Error — BoneGuard{% endblock %}
+
+{% block content %}
+<div class="error-page animate-in">
+  <h1 class="error-page__title">{{ title or 'Something went wrong' }}</h1>
+  <p class="error-page__message">{{ message or 'An unexpected error occurred. Please try again.' }}</p>
+  <a href="{{ url_for('index') }}" class="btn btn--primary" id="errorBackBtn">Back to Upload</a>
+</div>
+{% endblock %}

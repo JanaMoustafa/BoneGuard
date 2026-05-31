@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Report {{ report.report_id[:8] }} — BoneGuard{% endblock %}
+{% block container_class %}container--wide{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <h1 class="page-header__title">Patient Report</h1>
+  <p class="page-header__subtitle">
+    Generated {{ report.timestamp }} &middot; Report ID: <code style="color:var(--accent-blue); font-size:0.9em;">{{ report.report_id[:12] }}...</code>
+  </p>
+</div>
+
+<!-- Patient Info -->
+<div class="patient-info animate-in animate-in--delay-1">
+  <div class="patient-info__item">
+    <span class="patient-info__label">Original File</span>
+    <span class="patient-info__value">{{ report.original_filename }}</span>
+  </div>
+  <div class="patient-info__item">
+    <span class="patient-info__label">Age</span>
+    <span class="patient-info__value">{{ report.age }}</span>
+  </div>
+  <div class="patient-info__item">
+    <span class="patient-info__label">Gender</span>
+    <span class="patient-info__value">{{ 'Male' if report.gender in ['M', 'male'] else 'Female' }}</span>
+  </div>
+  <div class="patient-info__item">
+    <span class="patient-info__label">Status</span>
+    <span class="patient-info__value" style="color: {{ 'var(--accent-emerald)' if report.status == 'completed' else 'var(--accent-rose)' }}">
+      {{ report.status | capitalize }}
+    </span>
+  </div>
+</div>
+
+{% if report.status == 'completed' %}
+
+<!-- Tumour detection hero -->
+{% set tumor_prob = report.tumor_present_probability %}
+{% set is_positive = tumor_prob >= 0.50 %}
+<div class="detection-hero {{ 'detection-hero--positive' if is_positive else 'detection-hero--negative' }} animate-in animate-in--delay-1">
+  <div class="detection-hero__text">
+    <h3>{{ 'Tumour Pattern Detected' if is_positive else 'No Tumour Pattern Detected' }}</h3>
+    <p>Tumour presence probability: <strong>{{ '%.1f' | format(tumor_prob * 100) }}%</strong></p>
+  </div>
+  {% set risk = report.risk_estimate %}
+  <div style="margin-left: auto;">
+    <span class="risk-badge {{ 'risk-badge--high' if 'High' in risk else ('risk-badge--moderate' if 'Moderate' in risk else ('risk-badge--low' if 'Low' in risk else 'risk-badge--none')) }}">
+      {{ risk.split(' - ')[0] if ' - ' in risk else risk[:40] }}
+    </span>
+  </div>
+</div>
+
+<!-- Prediction cards grid -->
+<div class="report-grid animate-in animate-in--delay-2">
+  {% set cards = [
+    ('Tumour Type', report.tumor_type_display, report.tumor_confidence, 'blue'),
+    ('Neoplasm', report.neoplasm_display, report.neoplasm_confidence, 'violet'),
+    ('Skeletal Region', report.skeletal_type_display, report.skeletal_confidence, 'cyan'),
+    ('Bone Type', report.bones_type_display, report.bones_confidence, 'emerald'),
+  ] %}
+
+  {% for label, value, conf, color in cards %}
+  {% set conf_level = 'high' if conf >= 0.7 else ('medium' if conf >= 0.55 else 'low') %}
+  <div class="prediction-card">
+    <div class="prediction-card__label">{{ label }}</div>
+    <div class="prediction-card__value">{{ value }}</div>
+    <div class="prediction-card__confidence">
+      <span class="conf-dot conf-dot--{{ conf_level }}"></span>
+      Confidence: {{ '%.1f' | format(conf * 100) }}%
+    </div>
+    <div class="conf-bar">
+      <div class="conf-bar__fill conf-bar__fill--{{ conf_level }}" style="width: {{ (conf * 100) | int }}%"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Segmentation section -->
+<div class="card animate-in animate-in--delay-3">
+  <div class="card__header">
+    <h2 class="card__title">Segmentation &amp; Tumour Ratio</h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); margin-bottom: var(--space-lg);">
+    <div>
+      <div class="prediction-card__label" style="margin-bottom: 4px;">Tumour Ratio</div>
+      <div style="font-size: 1.1rem; font-weight: 600;">{{ report.tumour_ratio_text }}</div>
+    </div>
+    <div>
+      <div class="prediction-card__label" style="margin-bottom: 4px;">Risk Estimate</div>
+      <div style="font-size: 0.95rem; color: var(--text-secondary);">{{ report.risk_estimate }}</div>
+    </div>
+  </div>
+
+  <div class="overlay-section">
+    <div class="prediction-card__label" style="margin-bottom: var(--space-sm);">Segmentation Overlay</div>
+    <div class="overlay-preview">
+      <img src="{{ url_for('get_overlay', report_id=report.report_id) }}" alt="Segmentation overlay showing tumour regions highlighted in red">
+    </div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="actions-row animate-in animate-in--delay-4">
+  <a href="{{ url_for('get_pdf', report_id=report.report_id) }}" class="btn btn--primary btn--lg" id="downloadPdfBtn">
+    Download PDF Report
+  </a>
+  <a href="{{ url_for('get_overlay', report_id=report.report_id) }}" class="btn btn--secondary btn--lg" download id="downloadOverlayBtn">
+    Download Overlay
+  </a>
+  <a href="{{ url_for('index') }}" class="btn btn--secondary btn--lg" id="newReportBtn">
+    + New Report
+  </a>
+</div>
+
+{% else %}
+<!-- Error state -->
+<div class="card animate-in animate-in--delay-2">
+  <div class="card__header">
+    <h2 class="card__title">Report Generation Failed</h2>
+  </div>
+  <p style="color: var(--text-secondary);">{{ report.error or 'An unknown error occurred during report generation.' }}</p>
+  <div class="actions-row" style="margin-top: var(--space-lg);">
+    <a href="{{ url_for('index') }}" class="btn btn--primary">Try Again</a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Disclaimer -->
+<div class="card animate-in animate-in--delay-4" style="margin-top: var(--space-xl);">
+  <div class="card__header">
+    <h2 class="card__title">Disclaimer</h2>
+  </div>
+  <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.7;">
+    This report is generated by a research prototype using deep learning models trained on
+    limited academic datasets. It is <strong>not a medical diagnosis</strong> and must not
+    replace radiologist or physician assessment. Always consult qualified healthcare
+    professionals for medical evaluation and treatment decisions.
+  </p>
+</div>
+{% endblock %}
